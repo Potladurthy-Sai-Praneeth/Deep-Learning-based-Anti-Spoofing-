@@ -67,7 +67,7 @@ class AuthenticateUser():
                 elif 'classifier' in i:
                     self.classifier_pth_file = os.path.join(models_folder,i)     
 
-        self.classifier = ClassifierUCDCN(self.depth_model_pth_file,self.device,dropout=0.5).to(self.device)
+        self.classifier = ClassifierUCDCN(depth_map_path=self.depth_model_pth_file,device=self.device,dropout=0.5,load_depth_model=True).to(self.device)
         self.classifier.load_state_dict(torch.load(self.classifier_pth_file,map_location=self.device))
         self.classifier.eval()
 
@@ -138,11 +138,11 @@ class AuthenticateUser():
                     prediction = torch.argmax(output).item()
                     print(f"Predicted is {prediction} class: {'Real' if prediction == 1 else 'Spoof'}")
 
-                    # depth_map_display = cv2.applyColorMap(depth_map.squeeze(0).squeeze(0).cpu().numpy().astype('uint8'), cv2.COLORMAP_JET)
+                    depth_map_display = cv2.applyColorMap(depth_map.squeeze(0).squeeze(0).cpu().numpy().astype('uint8'), cv2.COLORMAP_JET)
                     # Display the resulting frame
-                    # cv2.imshow('Live Camera Feed', frame)
+                    cv2.imshow('Live Camera Feed', frame)
                     # Display the depth map
-                    # cv2.imshow('Depth Map', depth_map_display)
+                    cv2.imshow('Depth Map', depth_map_display)
 
                     if prediction == 1:
                         # If the prediction is real, proceed with face recognition
@@ -154,11 +154,17 @@ class AuthenticateUser():
                         for i in range(len(results)):
                             if results[i]:
                                 get_name = self.known_names[i]
-                                self.is_authenticated = True
-                                break           
+                                if get_name is not None:
+                                    self.is_authenticated = True
+                                    break
+                                else:
+                                    self.is_authenticated = False           
                         if self.is_authenticated:
                             print(f'Authenticated as {get_name}')
                             # Perform any necessary operations here
+
+                            # Add a delay to prevent multiple authentications and reset the authentication
+                            self.is_authenticated = False           
                         else:
                             print(f'Person is not a registered user')
                             self.is_authenticated = False
